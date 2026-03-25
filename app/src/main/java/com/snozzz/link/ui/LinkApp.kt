@@ -24,7 +24,6 @@ fun LinkApp() {
             if (permissionUiState.shouldShowGuide) {
                 PermissionGuideScreen(
                     uiState = permissionUiState,
-                    onOpenAccessibilitySettings = permissionGuideViewModel::openAccessibilitySettings,
                     onOpenUsageAccess = permissionGuideViewModel::openUsageSettings,
                     onOpenAppDetails = permissionGuideViewModel::openAppDetails,
                     onOpenAppSettingsList = permissionGuideViewModel::openAppSettingsList,

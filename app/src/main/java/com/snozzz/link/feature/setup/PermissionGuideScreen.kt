@@ -38,7 +38,6 @@ import com.snozzz.link.ui.theme.PeachSorbet
 @Composable
 fun PermissionGuideScreen(
     uiState: PermissionGuideUiState,
-    onOpenAccessibilitySettings: () -> Unit,
     onOpenUsageAccess: () -> Unit,
     onOpenAppDetails: () -> Unit,
     onOpenAppSettingsList: () -> Unit,
@@ -73,42 +72,32 @@ fun PermissionGuideScreen(
         ) {
             HeaderCard()
             PermissionCard(
-                title = "1. 推荐先开辅助功能",
-                body = "这一步是为了更稳定地记录“几点打开了什么 App”，尤其是微信分身这种系统隔离场景。进入后找到 Link，把辅助功能打开。",
+                title = "1. 先给 Link 开权限",
+                body = "你不需要在设置里找抖音、微信、QQ。真正要打开的是 Link 自己的 Usage Access 开关，打开后 Link 才能读取这些应用的前台记录。",
                 accent = Blush,
             )
             PermissionCard(
-                title = "2. Usage Access 继续负责时长统计",
-                body = "辅助功能更适合记前台切换时间线。Usage Access 适合补充“今天用了多久”这类统计，两者一起开效果最好。",
+                title = "2. 为什么不能像相机那样弹窗",
+                body = "因为 Usage Access 属于 Android 的特殊权限，不是普通运行时权限，所以系统不允许我直接弹一个一键授权框。",
                 accent = PeachSorbet,
             )
             PermissionCard(
-                title = "3. 只记录必要信息",
-                body = "Link 现在只会记录包名和时间戳，用来生成“某时间打开了某应用”的时间线，不会读取聊天内容或输入内容。",
+                title = "3. 对方动态怎么来",
+                body = "双方都开启后，Link 会读取各自手机上的本地记录，再通过服务器同步，最后显示成“某时间打开了某应用”。",
                 accent = MintCandy,
             )
-            when {
-                uiState.hasAccessibilityAccess && uiState.hasUsageAccess -> {
-                    StateCard(
-                        title = "辅助功能和 Usage Access 都已开启",
-                        body = "Moments 会优先用辅助功能生成前台时间线，同时用 Usage Access 补充时长统计。",
-                    )
-                }
-                uiState.hasAccessibilityAccess -> {
-                    StateCard(
-                        title = "辅助功能已开启",
-                        body = "Moments 现在可以开始记录“某时间打开了某应用”。如果你还想要更稳的时长统计，可以继续把 Usage Access 也打开。",
-                    )
-                }
-                else -> {
-                    ActionCard(
-                        onOpenAccessibilitySettings = onOpenAccessibilitySettings,
-                        onOpenUsageAccess = onOpenUsageAccess,
-                        onOpenAppDetails = onOpenAppDetails,
-                        onOpenAppSettingsList = onOpenAppSettingsList,
-                        onSkipGuide = onSkipGuide,
-                    )
-                }
+            if (uiState.hasUsageAccess) {
+                StateCard(
+                    title = "权限已开启",
+                    body = "已经检测到 Usage Access。返回主界面后，Moments 会开始读取本机当天的应用时间线。",
+                )
+            } else {
+                ActionCard(
+                    onOpenUsageAccess = onOpenUsageAccess,
+                    onOpenAppDetails = onOpenAppDetails,
+                    onOpenAppSettingsList = onOpenAppSettingsList,
+                    onSkipGuide = onSkipGuide,
+                )
             }
         }
     }
@@ -216,7 +205,6 @@ private fun StateCard(
 
 @Composable
 private fun ActionCard(
-    onOpenAccessibilitySettings: () -> Unit,
     onOpenUsageAccess: () -> Unit,
     onOpenAppDetails: () -> Unit,
     onOpenAppSettingsList: () -> Unit,
@@ -238,20 +226,14 @@ private fun ActionCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "优先点第一个按钮。进入辅助功能后找到 Link，把开关打开。Usage Access 可以放在第二步开。",
+                text = "优先点第一个按钮。进入后只需要把 Link 这一项打开，不用去找别的应用。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
             Button(
-                onClick = onOpenAccessibilitySettings,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 14.dp),
-            ) {
-                Text(text = "打开辅助功能设置")
-            }
-            OutlinedButton(
                 onClick = onOpenUsageAccess,
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 14.dp),
             ) {
                 Text(text = "打开 Usage Access 设置")
             }
@@ -276,8 +258,8 @@ private fun ActionCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "从设置返回时，Link 会自动重新检测权限状态。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             )
         }
     }
@@ -287,7 +269,7 @@ private fun ActionCard(
 private fun Bubble(color: Color) {
     Box(
         modifier = Modifier
-            .size(16.dp)
+            .size(18.dp)
             .background(color = color, shape = CircleShape),
     )
 }
