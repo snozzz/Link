@@ -1,0 +1,50 @@
+package com.snozzz.link.core.security
+
+import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.snozzz.link.core.model.SessionSnapshot
+
+class SecureSessionStore(context: Context) {
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val sharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        FILE_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+    )
+
+    fun load(): SessionSnapshot? {
+        val nickname = sharedPreferences.getString(KEY_NICKNAME, null) ?: return null
+        val pairCode = sharedPreferences.getString(KEY_PAIR_CODE, null) ?: return null
+        val inviteKeyMasked = sharedPreferences.getString(KEY_INVITE_KEY_MASKED, null) ?: return null
+        return SessionSnapshot(
+            nickname = nickname,
+            pairCode = pairCode,
+            inviteKeyMasked = inviteKeyMasked,
+        )
+    }
+
+    fun save(snapshot: SessionSnapshot) {
+        sharedPreferences.edit()
+            .putString(KEY_NICKNAME, snapshot.nickname)
+            .putString(KEY_PAIR_CODE, snapshot.pairCode)
+            .putString(KEY_INVITE_KEY_MASKED, snapshot.inviteKeyMasked)
+            .apply()
+    }
+
+    fun clear() {
+        sharedPreferences.edit().clear().apply()
+    }
+
+    private companion object {
+        const val FILE_NAME = "secure_session_store"
+        const val KEY_NICKNAME = "nickname"
+        const val KEY_PAIR_CODE = "pair_code"
+        const val KEY_INVITE_KEY_MASKED = "invite_key_masked"
+    }
+}

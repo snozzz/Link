@@ -11,16 +11,17 @@ Link is a private Android app for two consenting users to share daily app-usage 
 
 ## Current status
 
-The repository currently contains the initial Android app scaffold built with Jetpack Compose:
+The repository currently contains:
 
-- project Gradle files
-- a pastel design system
-- bottom navigation shell
-- placeholder screens for home, moments, and messages
+- a Jetpack Compose Android scaffold
+- a pastel design system and app shell
+- an invite-gated entry screen
+- encrypted local session persistence based on Android Keystore
+- a security design note for the later server implementation
 
 ## Local build note
 
 This workspace currently has Java 17 available, but not a local `gradle` installation or Gradle wrapper yet. If you want me to run builds from WSL, I will need either:
 
-1. Android Studio / Gradle wrapper files generated in the repo
+1. Android Studio to generate/import the wrapper
 2. an installed Gradle binary
