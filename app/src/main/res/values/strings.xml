@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Link</string>
+    <string name="accessibility_service_description">记录前台应用切换时间线，仅用于 Moments 页面显示“几点打开了什么应用”。</string>
 </resources>
