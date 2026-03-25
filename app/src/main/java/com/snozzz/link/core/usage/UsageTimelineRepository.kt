@@ -86,11 +86,20 @@ class UsageTimelineRepository(
     }
 
     private fun resolveAppName(packageName: String): String {
-        return runCatching {
+        val packageAlias = knownPackageAliases[packageName]
+        val packagePrefixAlias = knownPackagePrefixAliases.entries
+            .firstOrNull { (prefix, _) -> packageName.startsWith(prefix) }
+            ?.value
+
+        val label = runCatching {
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(applicationInfo).toString()
-        }.getOrElse {
-            packageName.substringAfterLast('.')
+        }.getOrNull()
+
+        return when {
+            label.isNullOrBlank() -> packageAlias ?: packagePrefixAlias ?: packageName.substringAfterLast('.')
+            label == packageName.substringAfterLast('.') -> packageAlias ?: packagePrefixAlias ?: label
+            else -> label
         }
     }
 
@@ -111,5 +120,21 @@ class UsageTimelineRepository(
             totalMinutes > 0 -> "${totalMinutes}m"
             else -> "<1m"
         }
+    }
+
+    private companion object {
+        val knownPackageAliases = mapOf(
+            "com.ss.android.ugc.aweme" to "抖音",
+            "com.tencent.mm" to "微信",
+            "com.tencent.mobileqq" to "QQ",
+            "com.xingin.xhs" to "小红书",
+            "tv.danmaku.bili" to "哔哩哔哩",
+        )
+
+        val knownPackagePrefixAliases = mapOf(
+            "com.ss.android.ugc.aweme" to "抖音",
+            "com.tencent.mm" to "微信",
+            "com.tencent.mobileqq" to "QQ",
+        )
     }
 }
