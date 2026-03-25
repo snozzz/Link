@@ -1,6 +1,8 @@
 package com.snozzz.link.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
@@ -22,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -40,6 +43,11 @@ fun AuthenticatedNavHost(
 ) {
     val navController = rememberNavController()
     var menuExpanded by remember { mutableStateOf(false) }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val isChatDestination = currentDestination?.hierarchy?.any { it.route == Destination.Chat.route } == true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -77,31 +85,31 @@ fun AuthenticatedNavHost(
             )
         },
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry = navController.currentBackStackEntryAsState().value
-                val currentDestination = navBackStackEntry?.destination
-                bottomDestinations.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (!(isChatDestination && imeVisible)) {
+                NavigationBar {
+                    bottomDestinations.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.title,
-                            )
-                        },
-                        label = {
-                            Text(text = destination.title)
-                        },
-                    )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = destination.title,
+                                )
+                            },
+                            label = {
+                                Text(text = destination.title)
+                            },
+                        )
+                    }
                 }
             }
         },

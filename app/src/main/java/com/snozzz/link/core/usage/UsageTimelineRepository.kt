@@ -86,20 +86,62 @@ class UsageTimelineRepository(
     }
 
     private fun resolveAppName(packageName: String): String {
-        val packageAlias = knownPackageAliases[packageName]
-        val packagePrefixAlias = knownPackagePrefixAliases.entries
-            .firstOrNull { (prefix, _) -> packageName.startsWith(prefix) }
-            ?.value
-
         val label = runCatching {
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(applicationInfo).toString()
         }.getOrNull()
 
+        val exactAlias = knownPackageAliases[packageName]
+        val prefixAlias = knownPackagePrefixAliases.entries
+            .firstOrNull { (prefix, _) -> packageName.startsWith(prefix) }
+            ?.value
+
+        val normalizedAlias = sequenceOf(
+            label,
+            packageName,
+            packageName.substringAfterLast('.'),
+        ).filterNotNull()
+            .map(::normalizeToAlias)
+            .firstOrNull()
+
         return when {
-            label.isNullOrBlank() -> packageAlias ?: packagePrefixAlias ?: packageName.substringAfterLast('.')
-            label == packageName.substringAfterLast('.') -> packageAlias ?: packagePrefixAlias ?: label
-            else -> label
+            !normalizedAlias.isNullOrBlank() -> normalizedAlias
+            !exactAlias.isNullOrBlank() -> exactAlias
+            !prefixAlias.isNullOrBlank() -> prefixAlias
+            !label.isNullOrBlank() && label != packageName.substringAfterLast('.') -> label
+            else -> packageName.substringAfterLast('.')
+        }
+    }
+
+    private fun normalizeToAlias(value: String): String? {
+        val trimmed = value.trim()
+        val lower = trimmed.lowercase()
+        return when {
+            trimmed.contains("抖音") ||
+                lower == "aweme" ||
+                lower.contains("ugc.aweme") ||
+                lower.contains("douyin") ||
+                lower.contains("amemv") -> "抖音"
+
+            trimmed.contains("微信") ||
+                lower == "mm" ||
+                lower.contains("tencent.mm") ||
+                lower.contains("wechat") ||
+                lower.contains("weixin") -> "微信"
+
+            trimmed.contains("QQ") ||
+                lower == "qq" ||
+                lower.contains("mobileqq") ||
+                lower.contains("tencent.mobileqq") -> "QQ"
+
+            trimmed.contains("小红书") ||
+                lower.contains("xingin") ||
+                lower.contains("xiaohongshu") -> "小红书"
+
+            trimmed.contains("哔哩") ||
+                lower.contains("bili") -> "哔哩哔哩"
+
+            else -> null
         }
     }
 
