@@ -23,13 +23,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.ButterCream
 import com.snozzz.link.ui.theme.MintCandy
@@ -39,6 +39,8 @@ import com.snozzz.link.ui.theme.PeachSorbet
 fun PermissionGuideScreen(
     uiState: PermissionGuideUiState,
     onOpenUsageAccess: () -> Unit,
+    onOpenAppDetails: () -> Unit,
+    onOpenAppSettingsList: () -> Unit,
     onSkipGuide: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -70,18 +72,18 @@ fun PermissionGuideScreen(
         ) {
             HeaderCard()
             PermissionCard(
-                title = "1. 打开 Usage Access",
-                body = "这是查看“几点打开了什么应用、用了多久”必须的系统权限。Android 不允许应用内一键开启，所以只能跳转到系统页后手动打开。",
+                title = "1. 先给 Link 开权限",
+                body = "你不需要在设置里找抖音、微信、QQ。真正要打开的是 Link 自己的 Usage Access 开关，打开后 Link 才能读取这些应用的前台记录。",
                 accent = Blush,
             )
             PermissionCard(
-                title = "2. 相册 / 文件权限",
-                body = "当前版本并不依赖相册权限，所以我不会为了图省事在首启时乱申请。后面如果要发图片，再单独请求。",
+                title = "2. 为什么不能像相机那样弹窗",
+                body = "因为 Usage Access 属于 Android 的特殊权限，不是普通运行时权限，所以系统不允许我直接弹一个一键授权框。",
                 accent = PeachSorbet,
             )
             PermissionCard(
-                title = "3. 对方动态同步",
-                body = "要看到“对方于某时间打开某应用”，需要双方都开启 Usage Access，并把各自的本地记录同步到服务器后再互相拉取。",
+                title = "3. 对方动态怎么来",
+                body = "双方都开启后，Link 会读取各自手机上的本地记录，再通过服务器同步，最后显示成“某时间打开了某应用”。",
                 accent = MintCandy,
             )
             if (uiState.hasUsageAccess) {
@@ -92,6 +94,8 @@ fun PermissionGuideScreen(
             } else {
                 ActionCard(
                     onOpenUsageAccess = onOpenUsageAccess,
+                    onOpenAppDetails = onOpenAppDetails,
+                    onOpenAppSettingsList = onOpenAppSettingsList,
                     onSkipGuide = onSkipGuide,
                 )
             }
@@ -122,7 +126,7 @@ private fun HeaderCard() {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "这一步只做真正必要的配置，避免一上来申请一堆无关权限。",
+                text = "这一步只做真正必要的配置，把你需要点的路径缩到最短。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -202,6 +206,8 @@ private fun StateCard(
 @Composable
 private fun ActionCard(
     onOpenUsageAccess: () -> Unit,
+    onOpenAppDetails: () -> Unit,
+    onOpenAppSettingsList: () -> Unit,
     onSkipGuide: () -> Unit,
 ) {
     Card(
@@ -215,12 +221,12 @@ private fun ActionCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "现在去设置",
+                text = "直接去设置",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "点下面按钮后会进入系统页面。你只需要把 Link 的 Usage Access 开关打开，再返回 App 即可。",
+                text = "优先点第一个按钮。进入后只需要把 Link 这一项打开，不用去找别的应用。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -232,6 +238,18 @@ private fun ActionCard(
                 Text(text = "打开 Usage Access 设置")
             }
             OutlinedButton(
+                onClick = onOpenAppDetails,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = "打开 Link 应用信息")
+            }
+            OutlinedButton(
+                onClick = onOpenAppSettingsList,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = "打开系统应用列表")
+            }
+            OutlinedButton(
                 onClick = onSkipGuide,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -239,7 +257,7 @@ private fun ActionCard(
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "如果你现在跳过，后面在 Moments 页面仍然可以再打开这个权限。",
+                text = "从设置返回时，Link 会自动重新检测权限状态。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
             )

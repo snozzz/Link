@@ -3,6 +3,7 @@ package com.snozzz.link.core.usage
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
@@ -29,8 +30,21 @@ class UsageAccessController(
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    fun openSettings() {
+    fun openUsageSettings() {
         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }
+
+    fun openAppDetails() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.fromParts("package", context.packageName, null))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }
+
+    fun openAppSettingsList() {
+        val intent = Intent(Settings.ACTION_APPLICATION_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }

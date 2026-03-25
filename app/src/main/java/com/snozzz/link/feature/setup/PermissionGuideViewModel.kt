@@ -32,7 +32,15 @@ class PermissionGuideViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun openUsageSettings() {
-        usageAccessController.openSettings()
+        usageAccessController.openUsageSettings()
+    }
+
+    fun openAppDetails() {
+        usageAccessController.openAppDetails()
+    }
+
+    fun openAppSettingsList() {
+        usageAccessController.openAppSettingsList()
     }
 
     fun skipGuide() {

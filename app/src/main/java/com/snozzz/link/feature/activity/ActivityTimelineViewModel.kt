@@ -32,6 +32,6 @@ class ActivityTimelineViewModel(application: Application) : AndroidViewModel(app
     }
 
     fun openUsageSettings() {
-        usageAccessController.openSettings()
+        usageAccessController.openUsageSettings()
     }
 }

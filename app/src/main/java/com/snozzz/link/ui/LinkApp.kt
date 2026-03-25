@@ -25,6 +25,8 @@ fun LinkApp() {
                 PermissionGuideScreen(
                     uiState = permissionUiState,
                     onOpenUsageAccess = permissionGuideViewModel::openUsageSettings,
+                    onOpenAppDetails = permissionGuideViewModel::openAppDetails,
+                    onOpenAppSettingsList = permissionGuideViewModel::openAppSettingsList,
                     onSkipGuide = permissionGuideViewModel::skipGuide,
                     onRefresh = permissionGuideViewModel::refresh,
                 )
