@@ -1,6 +1,7 @@
 package com.snozzz.link.core.usage
 
 import android.app.usage.UsageEvents
+import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -27,7 +28,6 @@ class UsageTimelineRepository(
             .toEpochMilli()
 
         val events = usageStatsManager.queryEvents(startOfDayMillis, nowMillis)
-        val totalForegroundDurations = mutableMapOf<String, Long>()
         val timelineItems = mutableListOf<UsageTimelineEventItem>()
         val lastTimelineIndexByPackage = mutableMapOf<String, Int>()
         var currentForegroundPackage: String? = null
@@ -37,7 +37,7 @@ class UsageTimelineRepository(
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val packageName = event.packageName ?: continue
-            if (!isForegroundEntryEvent(event.eventType)) {
+            if (shouldIgnorePackage(packageName) || !isForegroundEntryEvent(event.eventType)) {
                 continue
             }
             if (packageName == currentForegroundPackage) {
@@ -48,17 +48,13 @@ class UsageTimelineRepository(
             val previousStart = currentForegroundStart
             if (previousPackage != null && previousStart != null) {
                 val durationMillis = (event.timeStamp - previousStart).coerceAtLeast(0L)
-                if (durationMillis > 0L) {
-                    totalForegroundDurations[previousPackage] =
-                        totalForegroundDurations.getOrDefault(previousPackage, 0L) + durationMillis
-                    val previousIndex = lastTimelineIndexByPackage[previousPackage]
-                    if (previousIndex != null) {
-                        val previousItem = timelineItems[previousIndex]
-                        if (previousItem.durationLabel == null) {
-                            timelineItems[previousIndex] = previousItem.copy(
-                                durationLabel = formatDuration(durationMillis),
-                            )
-                        }
+                val previousIndex = lastTimelineIndexByPackage[previousPackage]
+                if (durationMillis > 0L && previousIndex != null) {
+                    val previousItem = timelineItems[previousIndex]
+                    if (previousItem.durationLabel == null) {
+                        timelineItems[previousIndex] = previousItem.copy(
+                            durationLabel = formatDuration(durationMillis),
+                        )
                     }
                 }
             }
@@ -76,32 +72,28 @@ class UsageTimelineRepository(
 
         if (currentForegroundPackage != null && currentForegroundStart != null) {
             val durationMillis = (nowMillis - currentForegroundStart).coerceAtLeast(0L)
-            if (durationMillis > 0L) {
-                totalForegroundDurations[currentForegroundPackage] =
-                    totalForegroundDurations.getOrDefault(currentForegroundPackage, 0L) + durationMillis
-                val lastIndex = lastTimelineIndexByPackage[currentForegroundPackage]
-                if (lastIndex != null) {
-                    val lastItem = timelineItems[lastIndex]
-                    if (lastItem.durationLabel == null) {
-                        timelineItems[lastIndex] = lastItem.copy(
-                            durationLabel = formatDuration(durationMillis),
-                        )
-                    }
+            val lastIndex = lastTimelineIndexByPackage[currentForegroundPackage]
+            if (durationMillis > 0L && lastIndex != null) {
+                val lastItem = timelineItems[lastIndex]
+                if (lastItem.durationLabel == null) {
+                    timelineItems[lastIndex] = lastItem.copy(
+                        durationLabel = formatDuration(durationMillis),
+                    )
                 }
             }
         }
 
-        val topApps = totalForegroundDurations
-            .toList()
-            .sortedByDescending { it.second }
+        val topApps = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startOfDayMillis,
+            nowMillis,
+        )
+            .asSequence()
+            .filter { !shouldIgnorePackage(it.packageName) }
+            .mapNotNull(::toSummaryItem)
+            .sortedByDescending { it.totalMinutes }
             .take(5)
-            .map { (packageName, durationMillis) ->
-                AppUsageSummaryItem(
-                    appName = resolveAppName(packageName),
-                    packageName = packageName,
-                    totalMinutes = (durationMillis / 60000L).toInt().coerceAtLeast(1),
-                )
-            }
+            .toList()
 
         return UsageTimelineSnapshot(
             topApps = topApps,
@@ -110,9 +102,28 @@ class UsageTimelineRepository(
         )
     }
 
+    private fun toSummaryItem(stats: UsageStats): AppUsageSummaryItem? {
+        val packageName = stats.packageName ?: return null
+        val durationMillis = maxOf(stats.totalTimeVisible, stats.totalTimeInForeground)
+        if (durationMillis < MIN_SUMMARY_DURATION_MILLIS) {
+            return null
+        }
+        return AppUsageSummaryItem(
+            appName = resolveAppName(packageName),
+            packageName = packageName,
+            totalMinutes = (durationMillis / 60000L).toInt().coerceAtLeast(1),
+        )
+    }
+
     private fun isForegroundEntryEvent(eventType: Int): Boolean {
         return eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
             eventType == UsageEvents.Event.ACTIVITY_RESUMED
+    }
+
+    private fun shouldIgnorePackage(packageName: String): Boolean {
+        return packageName == context.packageName ||
+            ignoredExactPackages.contains(packageName) ||
+            ignoredPackagePrefixes.any(packageName::startsWith)
     }
 
     private fun resolveAppName(packageName: String): String {
@@ -195,6 +206,8 @@ class UsageTimelineRepository(
     }
 
     private companion object {
+        const val MIN_SUMMARY_DURATION_MILLIS = 60_000L
+
         val knownPackageAliases = mapOf(
             "com.ss.android.ugc.aweme" to "抖音",
             "com.tencent.mm" to "微信",
@@ -207,6 +220,27 @@ class UsageTimelineRepository(
             "com.ss.android.ugc.aweme" to "抖音",
             "com.tencent.mm" to "微信",
             "com.tencent.mobileqq" to "QQ",
+        )
+
+        val ignoredExactPackages = setOf(
+            "android",
+            "com.android.systemui",
+            "com.android.permissioncontroller",
+            "com.android.settings",
+            "com.bbk.launcher2",
+            "com.iqoo.powersaving",
+            "com.vivo.doubleinstance",
+            "com.vivo.upslide",
+            "com.vivo.daemonService",
+        )
+
+        val ignoredPackagePrefixes = listOf(
+            "com.android.inputmethod",
+            "com.sohu.inputmethod",
+            "com.baidu.input",
+            "com.google.android.inputmethod",
+            "com.swiftkey",
+            "com.vivo.permissionmanager",
         )
     }
 }
