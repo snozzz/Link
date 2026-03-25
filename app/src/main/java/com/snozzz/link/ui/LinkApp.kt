@@ -6,6 +6,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.snozzz.link.feature.auth.InviteGateScreen
 import com.snozzz.link.feature.auth.InviteGateViewModel
+import com.snozzz.link.feature.setup.PermissionGuideScreen
+import com.snozzz.link.feature.setup.PermissionGuideViewModel
 import com.snozzz.link.ui.navigation.AuthenticatedNavHost
 import com.snozzz.link.ui.theme.LinkTheme
 
@@ -13,16 +15,28 @@ import com.snozzz.link.ui.theme.LinkTheme
 fun LinkApp() {
     LinkTheme {
         val inviteGateViewModel: InviteGateViewModel = viewModel()
-        val uiState by inviteGateViewModel.uiState.collectAsStateWithLifecycle()
+        val authUiState by inviteGateViewModel.uiState.collectAsStateWithLifecycle()
 
-        if (uiState.isAuthenticated) {
-            AuthenticatedNavHost(
-                pairLabel = uiState.pairLabel,
-                onLogout = inviteGateViewModel::logout,
-            )
+        if (authUiState.isAuthenticated) {
+            val permissionGuideViewModel: PermissionGuideViewModel = viewModel()
+            val permissionUiState by permissionGuideViewModel.uiState.collectAsStateWithLifecycle()
+
+            if (permissionUiState.shouldShowGuide) {
+                PermissionGuideScreen(
+                    uiState = permissionUiState,
+                    onOpenUsageAccess = permissionGuideViewModel::openUsageSettings,
+                    onSkipGuide = permissionGuideViewModel::skipGuide,
+                    onRefresh = permissionGuideViewModel::refresh,
+                )
+            } else {
+                AuthenticatedNavHost(
+                    pairLabel = authUiState.pairLabel,
+                    onLogout = inviteGateViewModel::logout,
+                )
+            }
         } else {
             InviteGateScreen(
-                uiState = uiState,
+                uiState = authUiState,
                 onInviteKeyChange = inviteGateViewModel::onInviteKeyChange,
                 onNicknameChange = inviteGateViewModel::onNicknameChange,
                 onPairCodeChange = inviteGateViewModel::onPairCodeChange,

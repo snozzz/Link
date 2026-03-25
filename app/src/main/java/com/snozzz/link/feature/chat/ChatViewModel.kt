@@ -22,9 +22,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             messages = messages,
             draftMessage = draft,
             partnerStatus = if (messages.isEmpty()) {
-                "Waiting for first sync"
+                "等待首次同步"
             } else {
-                "Local-first chat ready for backend sync"
+                "本地聊天已可用，下一步接服务器同步"
             },
         )
     }.stateIn(

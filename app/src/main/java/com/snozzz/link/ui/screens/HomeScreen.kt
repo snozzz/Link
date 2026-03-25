@@ -79,7 +79,7 @@ fun HomeScreen() {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "A tiny shared space for your day, your time, and your messages.",
+                    text = "把你们每天的时间线、留言和状态放进一个轻一点的小空间里。",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
                 )
@@ -89,22 +89,22 @@ fun HomeScreen() {
             }
             item {
                 SectionCard(
-                    title = "Today's Snapshot",
-                    body = "Usage timeline, top apps, and sync health will land here in the next module.",
+                    title = "今日概览",
+                    body = "Moments 会汇总今天使用过的 App、最近的时间线，以及后续的同步状态。",
                     accent = Blush,
                 )
             }
             item {
                 SectionCard(
-                    title = "Pair Space",
-                    body = "Invite key login, pairing, and relationship state will live here.",
+                    title = "配对空间",
+                    body = "邀请码登录、配对码绑定和双方关系状态会放在这一层。",
                     accent = MintCandy,
                 )
             }
             item {
                 SectionCard(
-                    title = "Privacy Promise",
-                    body = "The app will require explicit user consent before collecting usage access data.",
+                    title = "同步说明",
+                    body = "如果要看到对方于某时间打开某应用，双方都需要开启 Usage Access，并通过服务器交换各自的本地记录。",
                     accent = PeachSorbet,
                 )
             }
@@ -132,12 +132,12 @@ private fun HeroCard() {
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Good evening, S + L",
+                        text = "今晚的共享空间",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "A soft dashboard for the two of you.",
+                        text = "先把本地能力打稳，再把双方同步接上去。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.64f),
                     )
@@ -149,7 +149,7 @@ private fun HeroCard() {
                 }
             }
             Text(
-                text = "This first build sets the navigation, theme, and screen structure so we can add auth, chat, and app-usage sync without reshaping the UI again.",
+                text = "现在这版已经有登录门禁、本地聊天和 Usage 时间线读取。接下来会把邀请码校验、配对状态和服务器同步真正接起来。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
             )

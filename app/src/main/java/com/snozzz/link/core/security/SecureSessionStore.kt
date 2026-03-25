@@ -37,6 +37,16 @@ class SecureSessionStore(context: Context) {
             .apply()
     }
 
+    fun hasDismissedPermissionGuide(): Boolean {
+        return sharedPreferences.getBoolean(KEY_PERMISSION_GUIDE_DISMISSED, false)
+    }
+
+    fun setPermissionGuideDismissed(value: Boolean) {
+        sharedPreferences.edit()
+            .putBoolean(KEY_PERMISSION_GUIDE_DISMISSED, value)
+            .apply()
+    }
+
     fun clear() {
         sharedPreferences.edit().clear().apply()
     }
@@ -46,5 +56,6 @@ class SecureSessionStore(context: Context) {
         const val KEY_NICKNAME = "nickname"
         const val KEY_PAIR_CODE = "pair_code"
         const val KEY_INVITE_KEY_MASKED = "invite_key_masked"
+        const val KEY_PERMISSION_GUIDE_DISMISSED = "permission_guide_dismissed"
     }
 }

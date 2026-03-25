@@ -219,8 +219,8 @@ private fun MessageBubble(message: ChatMessage) {
 
 private fun deliveryLabel(state: MessageDeliveryState): String {
     return when (state) {
-        MessageDeliveryState.LOCAL_ONLY -> "local"
-        MessageDeliveryState.SYNCING -> "syncing"
-        MessageDeliveryState.SYNCED -> "synced"
+        MessageDeliveryState.LOCAL_ONLY -> "仅本地"
+        MessageDeliveryState.SYNCING -> "同步中"
+        MessageDeliveryState.SYNCED -> "已同步"
     }
 }

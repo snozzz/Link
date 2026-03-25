@@ -2,7 +2,6 @@ package com.snozzz.link.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -150,7 +149,7 @@ private fun TopAppsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Today's Top Apps",
+                text = "今天最常使用的 App",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -172,7 +171,7 @@ private fun TopAppsCard(
                             fontWeight = FontWeight.Medium,
                         )
                         Text(
-                            text = "${app.totalMinutes} min",
+                            text = "${app.totalMinutes} 分钟",
                             style = MaterialTheme.typography.bodyLarge,
                             color = Blush,
                         )
@@ -218,7 +217,7 @@ private fun TimelineCard(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f),
             )
             Text(
-                text = item.durationLabel?.let { "Foreground duration $it" } ?: "Background event recorded",
+                text = item.durationLabel?.let { "前台使用时长 $it" } ?: "已记录一次后台切换事件",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )

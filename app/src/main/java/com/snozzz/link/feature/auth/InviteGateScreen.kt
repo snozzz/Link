@@ -98,7 +98,7 @@ private fun InviteHeader() {
                 Bubble(color = MintCandy)
             }
             Text(
-                text = "Link Gate",
+                text = "Link 测试入口",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -124,7 +124,7 @@ private fun SecurityCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Security Prototype",
+                text = "安全说明",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -157,7 +157,7 @@ private fun InviteForm(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                text = "Invite Access",
+                text = "邀请码验证",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
