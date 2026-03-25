@@ -3,9 +3,10 @@ package com.snozzz.link.ui.navigation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,9 +29,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.snozzz.link.ui.screens.ActivityScreenRoute
-import com.snozzz.link.ui.screens.ChatScreen
+import com.snozzz.link.ui.screens.ChatScreenRoute
 import com.snozzz.link.ui.screens.HomeScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthenticatedNavHost(
     pairLabel: String,
@@ -52,7 +54,7 @@ fun AuthenticatedNavHost(
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(
-                            imageVector = Icons.Rounded.Logout,
+                            imageVector = Icons.AutoMirrored.Rounded.Logout,
                             contentDescription = "logout",
                         )
                     }
@@ -116,7 +118,7 @@ fun AuthenticatedNavHost(
                 ActivityScreenRoute()
             }
             composable(Destination.Chat.route) {
-                ChatScreen()
+                ChatScreenRoute()
             }
         }
     }

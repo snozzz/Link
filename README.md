@@ -18,11 +18,9 @@ The repository currently contains:
 - an invite-gated entry screen
 - encrypted local session persistence based on Android Keystore
 - a local Usage Access permission flow and today timeline reader
-- a security design note for the later server implementation
+- a stateful local chat module with backend contract scaffolding
+- security and API contract notes for the later server implementation
 
 ## Local build note
 
-This workspace currently has Java 17 available, but not a local `gradle` installation or Gradle wrapper yet. If you want me to run builds from WSL, I will need either:
-
-1. Android Studio to generate/import the wrapper
-2. an installed Gradle binary
+This workspace now includes a working Gradle wrapper. The Android SDK is currently wired through a temporary WSL path during local builds.
