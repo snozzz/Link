@@ -27,43 +27,68 @@ class UsageTimelineRepository(
             .toEpochMilli()
 
         val events = usageStatsManager.queryEvents(startOfDayMillis, nowMillis)
-        val activeForegroundStarts = mutableMapOf<String, Long>()
         val totalForegroundDurations = mutableMapOf<String, Long>()
         val timelineItems = mutableListOf<UsageTimelineEventItem>()
+        val lastTimelineIndexByPackage = mutableMapOf<String, Int>()
+        var currentForegroundPackage: String? = null
+        var currentForegroundStart: Long? = null
         val event = UsageEvents.Event()
 
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val packageName = event.packageName ?: continue
-            when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-                    activeForegroundStarts[packageName] = event.timeStamp
-                }
+            if (!isForegroundEntryEvent(event.eventType)) {
+                continue
+            }
+            if (packageName == currentForegroundPackage) {
+                continue
+            }
 
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val foregroundStart = activeForegroundStarts.remove(packageName)
-                    val durationMillis = if (foregroundStart != null) {
-                        (event.timeStamp - foregroundStart).coerceAtLeast(0L)
-                    } else {
-                        null
+            val previousPackage = currentForegroundPackage
+            val previousStart = currentForegroundStart
+            if (previousPackage != null && previousStart != null) {
+                val durationMillis = (event.timeStamp - previousStart).coerceAtLeast(0L)
+                if (durationMillis > 0L) {
+                    totalForegroundDurations[previousPackage] =
+                        totalForegroundDurations.getOrDefault(previousPackage, 0L) + durationMillis
+                    val previousIndex = lastTimelineIndexByPackage[previousPackage]
+                    if (previousIndex != null) {
+                        val previousItem = timelineItems[previousIndex]
+                        if (previousItem.durationLabel == null) {
+                            timelineItems[previousIndex] = previousItem.copy(
+                                durationLabel = formatDuration(durationMillis),
+                            )
+                        }
                     }
-                    if (durationMillis != null) {
-                        totalForegroundDurations[packageName] =
-                            totalForegroundDurations.getOrDefault(packageName, 0L) + durationMillis
-                    }
-                    timelineItems += UsageTimelineEventItem(
-                        appName = resolveAppName(packageName),
-                        packageName = packageName,
-                        timeLabel = formatTime(event.timeStamp),
-                        durationLabel = durationMillis?.let(::formatDuration),
-                    )
                 }
             }
+
+            currentForegroundPackage = packageName
+            currentForegroundStart = event.timeStamp
+            timelineItems += UsageTimelineEventItem(
+                appName = resolveAppName(packageName),
+                packageName = packageName,
+                timeLabel = formatTime(event.timeStamp),
+                durationLabel = null,
+            )
+            lastTimelineIndexByPackage[packageName] = timelineItems.lastIndex
         }
 
-        activeForegroundStarts.forEach { (packageName, foregroundStart) ->
-            totalForegroundDurations[packageName] =
-                totalForegroundDurations.getOrDefault(packageName, 0L) + (nowMillis - foregroundStart).coerceAtLeast(0L)
+        if (currentForegroundPackage != null && currentForegroundStart != null) {
+            val durationMillis = (nowMillis - currentForegroundStart).coerceAtLeast(0L)
+            if (durationMillis > 0L) {
+                totalForegroundDurations[currentForegroundPackage] =
+                    totalForegroundDurations.getOrDefault(currentForegroundPackage, 0L) + durationMillis
+                val lastIndex = lastTimelineIndexByPackage[currentForegroundPackage]
+                if (lastIndex != null) {
+                    val lastItem = timelineItems[lastIndex]
+                    if (lastItem.durationLabel == null) {
+                        timelineItems[lastIndex] = lastItem.copy(
+                            durationLabel = formatDuration(durationMillis),
+                        )
+                    }
+                }
+            }
         }
 
         val topApps = totalForegroundDurations
@@ -83,6 +108,11 @@ class UsageTimelineRepository(
             recentEvents = timelineItems.takeLast(12).asReversed(),
             refreshedAtLabel = formatTime(nowMillis),
         )
+    }
+
+    private fun isForegroundEntryEvent(eventType: Int): Boolean {
+        return eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+            eventType == UsageEvents.Event.ACTIVITY_RESUMED
     }
 
     private fun resolveAppName(packageName: String): String {
