@@ -2,6 +2,8 @@ package com.snozzz.link.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -13,8 +15,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.snozzz.link.ui.screens.ActivityScreen
+import com.snozzz.link.ui.screens.ActivityScreenRoute
 import com.snozzz.link.ui.screens.ChatScreen
 import com.snozzz.link.ui.screens.HomeScreen
 
@@ -113,7 +113,7 @@ fun AuthenticatedNavHost(
                 HomeScreen()
             }
             composable(Destination.Activity.route) {
-                ActivityScreen()
+                ActivityScreenRoute()
             }
             composable(Destination.Chat.route) {
                 ChatScreen()

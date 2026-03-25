@@ -17,6 +17,7 @@ The repository currently contains:
 - a pastel design system and app shell
 - an invite-gated entry screen
 - encrypted local session persistence based on Android Keystore
+- a local Usage Access permission flow and today timeline reader
 - a security design note for the later server implementation
 
 ## Local build note

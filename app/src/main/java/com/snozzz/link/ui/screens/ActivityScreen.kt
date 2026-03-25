@@ -2,36 +2,61 @@ package com.snozzz.link.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.snozzz.link.core.model.AppUsageSummaryItem
+import com.snozzz.link.core.model.UsageTimelineEventItem
+import com.snozzz.link.feature.activity.ActivityTimelineUiState
+import com.snozzz.link.feature.activity.ActivityTimelineViewModel
+import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.ButterCream
 import com.snozzz.link.ui.theme.LavenderMilk
-import com.snozzz.link.ui.theme.PeachSorbet
+import com.snozzz.link.ui.theme.MintCandy
 
 @Composable
-fun ActivityScreen() {
-    val sampleItems = listOf(
-        "09:12 Opened WeChat",
-        "13:40 Watched Bilibili for 26 min",
-        "20:05 Reading mode placeholder",
-    )
+fun ActivityScreenRoute() {
+    val viewModel: ActivityTimelineViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LifecycleResumeEffect(Unit) {
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
+
+    ActivityScreen(
+        uiState = uiState,
+        onOpenUsageAccess = viewModel::openUsageSettings,
+    )
+}
+
+@Composable
+fun ActivityScreen(
+    uiState: ActivityTimelineUiState,
+    onOpenUsageAccess: () -> Unit,
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -54,39 +79,149 @@ fun ActivityScreen() {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Foreground app events and daily usage summaries will be rendered here.",
+                text = if (uiState.hasUsageAccess) {
+                    "本地时间线已刷新到 ${uiState.refreshedAtLabel}。后面接上服务端后，会同步给对方。"
+                } else {
+                    "先打开使用情况访问权限，才能读取今天看过哪些 App 和用了多久。"
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
             )
         }
-        items(sampleItems) { itemText ->
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = itemText,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "These are sample cards only. Real data will come from UsageStats access and local aggregation.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                    )
-                    Text(
-                        text = if (itemText.contains("26 min")) "Usage summary" else "Event item",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = PeachSorbet,
-                    )
+
+        if (!uiState.hasUsageAccess) {
+            item {
+                PermissionCard(onOpenUsageAccess = onOpenUsageAccess)
+            }
+        } else {
+            item {
+                TopAppsCard(topApps = uiState.topApps)
+            }
+            items(uiState.recentEvents) { item ->
+                TimelineCard(item = item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionCard(
+    onOpenUsageAccess: () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "需要 Usage Access",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "这是 Android 的系统级授权。只有你手动打开后，App 才能统计当天前台应用和使用时长。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
+            Button(onClick = onOpenUsageAccess) {
+                Text(text = "打开权限设置")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopAppsCard(
+    topApps: List<AppUsageSummaryItem>,
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Today's Top Apps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (topApps.isEmpty()) {
+                Text(
+                    text = "今天暂时没有读取到前台使用数据。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                )
+            } else {
+                topApps.forEachIndexed { index, app ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "${index + 1}. ${app.appName}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = "${app.totalMinutes} min",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Blush,
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TimelineCard(
+    item: UsageTimelineEventItem,
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = item.appName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = item.timeLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MintCandy.copy(alpha = 0.95f),
+                )
+            }
+            Text(
+                text = item.packageName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f),
+            )
+            Text(
+                text = item.durationLabel?.let { "Foreground duration $it" } ?: "Background event recorded",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
         }
     }
 }
