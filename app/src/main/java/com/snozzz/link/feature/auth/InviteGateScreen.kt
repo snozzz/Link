@@ -1,23 +1,20 @@
 package com.snozzz.link.feature.auth
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,30 +28,16 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.ButterCream
 import com.snozzz.link.ui.theme.MintCandy
 import com.snozzz.link.ui.theme.PeachSorbet
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-
-private enum class InviteField {
-    Nickname,
-    PairCode,
-}
 
 @Composable
 fun InviteGateScreen(
@@ -86,6 +69,17 @@ fun InviteGateScreen(
         ) {
             InviteHeader()
             SecurityCard()
+            Spacer(modifier = Modifier.height(260.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+        ) {
             InviteForm(
                 uiState = uiState,
                 onNicknameChange = onNicknameChange,
@@ -153,7 +147,6 @@ private fun SecurityCard() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun InviteForm(
     uiState: InviteGateUiState,
@@ -161,24 +154,6 @@ private fun InviteForm(
     onPairCodeChange: (String) -> Unit,
     onUnlockClick: () -> Unit,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val imeBottom = WindowInsets.ime.getBottom(density)
-    val nicknameBringIntoViewRequester = remember { BringIntoViewRequester() }
-    val pairCodeBringIntoViewRequester = remember { BringIntoViewRequester() }
-    var focusedField by remember { mutableStateOf<InviteField?>(null) }
-
-    LaunchedEffect(imeBottom, focusedField) {
-        if (imeBottom > 0) {
-            delay(100)
-            when (focusedField) {
-                InviteField.Nickname -> nicknameBringIntoViewRequester.bringIntoView()
-                InviteField.PairCode -> pairCodeBringIntoViewRequester.bringIntoView()
-                null -> Unit
-            }
-        }
-    }
-
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = Color.White.copy(alpha = 0.94f),
@@ -198,36 +173,14 @@ private fun InviteForm(
             OutlinedTextField(
                 value = uiState.nickname,
                 onValueChange = onNicknameChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(nicknameBringIntoViewRequester)
-                    .onFocusEvent { state ->
-                        if (state.isFocused) {
-                            focusedField = InviteField.Nickname
-                            coroutineScope.launch {
-                                delay(100)
-                                nicknameBringIntoViewRequester.bringIntoView()
-                            }
-                        }
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("你的昵称") },
             )
             OutlinedTextField(
                 value = uiState.pairCode,
                 onValueChange = onPairCodeChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(pairCodeBringIntoViewRequester)
-                    .onFocusEvent { state ->
-                        if (state.isFocused) {
-                            focusedField = InviteField.PairCode
-                            coroutineScope.launch {
-                                delay(100)
-                                pairCodeBringIntoViewRequester.bringIntoView()
-                            }
-                        }
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("服务器配对码") },
                 supportingText = { Text("由服务器生成，例如 4B5Y；最多两台设备可用") },
