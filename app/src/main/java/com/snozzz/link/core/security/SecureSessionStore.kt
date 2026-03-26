@@ -22,10 +22,14 @@ class SecureSessionStore(context: Context) {
         val nickname = sharedPreferences.getString(KEY_NICKNAME, null) ?: return null
         val pairCode = sharedPreferences.getString(KEY_PAIR_CODE, null) ?: return null
         val inviteKeyMasked = sharedPreferences.getString(KEY_INVITE_KEY_MASKED, null) ?: return null
+        val sessionToken = sharedPreferences.getString(KEY_SESSION_TOKEN, null) ?: return null
+        val pairId = sharedPreferences.getString(KEY_PAIR_ID, null) ?: return null
         return SessionSnapshot(
             nickname = nickname,
             pairCode = pairCode,
             inviteKeyMasked = inviteKeyMasked,
+            sessionToken = sessionToken,
+            pairId = pairId,
         )
     }
 
@@ -34,6 +38,8 @@ class SecureSessionStore(context: Context) {
             .putString(KEY_NICKNAME, snapshot.nickname)
             .putString(KEY_PAIR_CODE, snapshot.pairCode)
             .putString(KEY_INVITE_KEY_MASKED, snapshot.inviteKeyMasked)
+            .putString(KEY_SESSION_TOKEN, snapshot.sessionToken)
+            .putString(KEY_PAIR_ID, snapshot.pairId)
             .apply()
     }
 
@@ -56,6 +62,8 @@ class SecureSessionStore(context: Context) {
         const val KEY_NICKNAME = "nickname"
         const val KEY_PAIR_CODE = "pair_code"
         const val KEY_INVITE_KEY_MASKED = "invite_key_masked"
+        const val KEY_SESSION_TOKEN = "session_token"
+        const val KEY_PAIR_ID = "pair_id"
         const val KEY_PERMISSION_GUIDE_DISMISSED = "permission_guide_dismissed"
     }
 }

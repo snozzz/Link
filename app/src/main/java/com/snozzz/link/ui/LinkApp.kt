@@ -42,7 +42,7 @@ fun LinkApp() {
                 onInviteKeyChange = inviteGateViewModel::onInviteKeyChange,
                 onNicknameChange = inviteGateViewModel::onNicknameChange,
                 onPairCodeChange = inviteGateViewModel::onPairCodeChange,
-                onUnlockClick = inviteGateViewModel::unlockPrototype,
+                onUnlockClick = inviteGateViewModel::unlockInvite,
             )
         }
     }

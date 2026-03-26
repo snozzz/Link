@@ -26,7 +26,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -103,7 +102,7 @@ private fun InviteHeader() {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "先用邀请码进入测试版，再和对方通过配对码建立私密空间。",
+                text = "现在这版已经连上服务器。输入邀请码、配对码和昵称后，就会进入你们的私密空间。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -129,7 +128,7 @@ private fun SecurityCard() {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "当前版本已接入本地加密会话存储。下一步会由服务端签发邀请码、设备公钥和会话令牌。",
+                text = "当前版本会向你的 Link 服务器请求会话令牌，再把本地消息和 Moments 同步到双方空间。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -174,7 +173,7 @@ private fun InviteForm(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("配对码") },
-                supportingText = { Text("例如 LOVE520 或 LINK01") },
+                supportingText = { Text("由服务器生成，例如 4B5Y") },
             )
             OutlinedTextField(
                 value = uiState.inviteKey,
@@ -216,7 +215,7 @@ private fun InviteForm(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "这个阶段仍是原型校验。真正的邀请码验签、设备绑定和会话签发会在服务端模块完成。",
+                text = "如果提示邀请码和配对码不匹配，说明你们两边输入的不是同一组。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f),
             )

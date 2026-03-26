@@ -5,5 +5,5 @@ import com.snozzz.link.core.model.ChatMessage
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val draftMessage: String = "",
-    val partnerStatus: String = "Waiting for first sync",
+    val partnerStatus: String = "正在连接服务器…",
 )

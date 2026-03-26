@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val chatRepository = (application as LinkApplication).chatRepository
@@ -16,22 +17,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     val uiState: StateFlow<ChatUiState> = combine(
         chatRepository.observeMessages(),
+        chatRepository.observePartnerStatus(),
         draftMessage,
-    ) { messages, draft ->
+    ) { messages, partnerStatus, draft ->
         ChatUiState(
             messages = messages,
             draftMessage = draft,
-            partnerStatus = if (messages.isEmpty()) {
-                "等待首次同步"
-            } else {
-                "本地聊天已可用，下一步接服务器同步"
-            },
+            partnerStatus = partnerStatus,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ChatUiState(),
     )
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            runCatching { chatRepository.refreshMessages() }
+        }
+    }
 
     fun onDraftChange(value: String) {
         draftMessage.value = value
@@ -40,7 +48,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendDraft() {
         val text = draftMessage.value.trim()
         if (text.isEmpty()) return
-        chatRepository.sendMessage(text)
         draftMessage.value = ""
+        viewModelScope.launch {
+            chatRepository.sendMessage(text)
+        }
     }
 }

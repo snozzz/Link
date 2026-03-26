@@ -78,13 +78,25 @@ fun ActivityScreen(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = if (uiState.hasUsageAccess) {
-                    "本地时间线已刷新到 ${uiState.refreshedAtLabel}。后面接上服务端后，会同步给对方。"
-                } else {
-                    "先打开使用情况访问权限，才能读取今天看过哪些 App 和用了多久。"
-                },
+                text = "本地 Moments 会先在这里展示，再同步到服务器；如果对方已经上传，也会直接显示在下面。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+
+        item {
+            SyncStatusCard(
+                title = "本地同步状态",
+                body = uiState.localSyncMessage,
+            )
+        }
+
+        item {
+            PartnerMomentsCard(
+                nickname = uiState.partnerNickname,
+                refreshedAtLabel = uiState.partnerRefreshedAtLabel,
+                status = uiState.partnerStatus,
+                events = uiState.partnerEvents,
             )
         }
 
@@ -98,6 +110,87 @@ fun ActivityScreen(
             }
             items(uiState.recentEvents) { item ->
                 TimelineCard(item = item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncStatusCard(
+    title: String,
+    body: String,
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PartnerMomentsCard(
+    nickname: String,
+    refreshedAtLabel: String,
+    status: String,
+    events: List<UsageTimelineEventItem>,
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "$nickname 的最新动态",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = status,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            )
+            if (events.isNotEmpty()) {
+                Text(
+                    text = "同步时间 $refreshedAtLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MintCandy.copy(alpha = 0.95f),
+                )
+                events.take(6).forEach { item ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "${item.timeLabel} 打开 ${item.appName}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = item.packageName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f),
+                        )
+                    }
+                }
             }
         }
     }

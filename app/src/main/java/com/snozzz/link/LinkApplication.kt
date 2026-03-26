@@ -1,7 +1,8 @@
 package com.snozzz.link
 
 import android.app.Application
-import com.snozzz.link.core.chat.InMemoryChatRepository
+import com.snozzz.link.core.chat.BackendChatRepository
+import com.snozzz.link.core.network.LinkBackendClient
 import com.snozzz.link.core.security.SecureSessionStore
 
 class LinkApplication : Application() {
@@ -9,7 +10,14 @@ class LinkApplication : Application() {
         SecureSessionStore(this)
     }
 
-    val chatRepository: InMemoryChatRepository by lazy {
-        InMemoryChatRepository()
+    val backendClient: LinkBackendClient by lazy {
+        LinkBackendClient()
+    }
+
+    val chatRepository: BackendChatRepository by lazy {
+        BackendChatRepository(
+            backendClient = backendClient,
+            sessionStore = sessionStore,
+        )
     }
 }
