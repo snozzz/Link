@@ -13,6 +13,8 @@ except ImportError:
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from .db import DB_PATH, get_connection, init_db
 from .models import (
@@ -22,6 +24,8 @@ from .models import (
     PairCodeUnlockRequest,
     PairCodeUnlockResponse,
     PairStatusResponse,
+    PhotoBackupItemResponse,
+    PhotoBackupListResponse,
     PhotoBackupSummaryResponse,
     PhotoUploadResponse,
     SyncedMessagePayload,
@@ -34,7 +38,14 @@ PAIR_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 PAIR_CODE_LENGTH = 4
 PHOTO_UPLOADS_DIR = Path(__file__).resolve().parent.parent / "uploads" / "photos"
 
-app = FastAPI(title="Link Server", version="0.4.0")
+app = FastAPI(title="Link Server", version="0.4.1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
@@ -528,4 +539,79 @@ def photo_summary(
         latest_uploaded_at_epoch_millis=latest["uploaded_at_epoch_millis"] if latest else None,
         latest_owner_nickname=latest["owner_nickname"] if latest else None,
         latest_display_name=latest["display_name"] if latest else None,
+    )
+
+
+@app.get("/v1/photos/list/{pair_id}", response_model=PhotoBackupListResponse)
+def photo_list(
+    pair_id: str,
+    limit: int = 60,
+    offset: int = 0,
+    token: Annotated[str, Depends(bearer_token)] = "",
+) -> PhotoBackupListResponse:
+    require_pair_access(pair_id, token)
+    safe_limit = max(1, min(limit, 200))
+    safe_offset = max(0, offset)
+    with get_connection() as connection:
+        total_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM photo_backups WHERE pair_id = ?",
+            (pair_id,),
+        ).fetchone()["count"]
+        rows = connection.execute(
+            """
+            SELECT id, owner_nickname, display_name, mime_type, size_bytes,
+                   captured_at_epoch_millis, uploaded_at_epoch_millis
+            FROM photo_backups
+            WHERE pair_id = ?
+            ORDER BY uploaded_at_epoch_millis DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (pair_id, safe_limit, safe_offset),
+        ).fetchall()
+
+    return PhotoBackupListResponse(
+        pair_id=pair_id,
+        total_count=total_count,
+        items=[
+            PhotoBackupItemResponse(
+                photo_id=row["id"],
+                owner_nickname=row["owner_nickname"],
+                display_name=row["display_name"],
+                mime_type=row["mime_type"],
+                size_bytes=row["size_bytes"],
+                captured_at_epoch_millis=row["captured_at_epoch_millis"],
+                uploaded_at_epoch_millis=row["uploaded_at_epoch_millis"],
+            )
+            for row in rows
+        ],
+    )
+
+
+@app.get("/v1/photos/file/{photo_id}")
+def photo_file(
+    photo_id: str,
+    token: Annotated[str, Depends(bearer_token)],
+):
+    session = get_session(token)
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT pair_id, stored_path, mime_type, display_name
+            FROM photo_backups
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (photo_id,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="photo_not_found")
+    if row["pair_id"] != session["pair_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="pair_access_denied")
+    file_path = DB_PATH.parent / row["stored_path"]
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="photo_file_missing")
+    return FileResponse(
+        path=file_path,
+        media_type=row["mime_type"] or "application/octet-stream",
+        filename=row["display_name"],
     )

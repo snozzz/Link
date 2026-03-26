@@ -82,6 +82,22 @@ class PhotoUploadResponse(BaseModel):
     stored: bool
 
 
+class PhotoBackupItemResponse(BaseModel):
+    photo_id: str
+    owner_nickname: str
+    display_name: str
+    mime_type: Optional[str] = None
+    size_bytes: int
+    captured_at_epoch_millis: int
+    uploaded_at_epoch_millis: int
+
+
+class PhotoBackupListResponse(BaseModel):
+    pair_id: str
+    total_count: int
+    items: List[PhotoBackupItemResponse]
+
+
 class PhotoBackupSummaryResponse(BaseModel):
     pair_id: str
     total_photos: int
