@@ -2,8 +2,8 @@
 
 这是 `Link` 的最小可用服务端，当前负责 5 类能力：
 
-1. 系统生成邀请码和配对码
-2. 用 `invite_key + pair_code` 解锁并签发 `session_token`
+1. 系统生成唯一配对码
+2. 用服务器生成的 `pair_code` 解锁并签发 `session_token`
 3. 查询当前配对状态
 4. 同步聊天消息
 5. 上传和读取双方的 Moments usage 快照
@@ -25,41 +25,43 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 
 ## 最小联调流程
 
-### 1. 生成一对情侣的邀请信息
+### 1. 生成一组配对码
 
 ```bash
-curl -X POST http://127.0.0.1:8080/v1/internal/invites/create
+curl -X POST http://127.0.0.1:8080/v1/internal/pair-codes/create
 ```
 
 返回示例：
 
 ```json
 {
-  "invite_key": "abc123...",
   "pair_code": "7K9M",
   "expires_in_minutes": 60,
   "remaining_slots": 2
 }
 ```
 
-同一组 `invite_key + pair_code` 可以给两个人分别登录，最多 2 人。
+说明：
 
-### 2. 第一个人登录
+- 配对码由服务器生成，具有唯一性
+- 同一组 `pair_code` 最多允许两台设备加入
+- 不是服务器签发的配对码不能进入
+- 用满两台设备后，这组配对码失效
+
+### 2. 第一台设备登录
 
 ```bash
-curl -X POST http://127.0.0.1:8080/v1/auth/invite/unlock   -H 'Content-Type: application/json'   -d '{
-    "invite_key": "你的邀请码",
+curl -X POST http://127.0.0.1:8080/v1/auth/pair-code/unlock   -H 'Content-Type: application/json'   -d '{
     "pair_code": "你的配对码",
     "nickname": "snoz",
     "device_public_key": "debug-device-public-key-0001"
   }'
 ```
 
-### 3. 第二个人登录
+### 3. 第二台设备登录
 
 ```bash
-curl -X POST http://127.0.0.1:8080/v1/auth/invite/unlock   -H 'Content-Type: application/json'   -d '{
-    "invite_key": "同一个邀请码",
+curl -X POST http://127.0.0.1:8080/v1/auth/pair-code/unlock   -H 'Content-Type: application/json'   -d '{
     "pair_code": "同一个配对码",
     "nickname": "girlfriend",
     "device_public_key": "debug-device-public-key-0002"
@@ -129,7 +131,7 @@ curl http://127.0.0.1:8080/v1/usage/latest/pair_7k9m   -H 'Authorization: Bearer
 ## 当前取舍
 
 - 使用 `sqlite3`，适合单机或轻量 VPS 原型
-- 邀请码默认 60 分钟有效，最多 2 次使用
+- 配对码默认 60 分钟有效，最多 2 台设备使用
 - 聊天同步当前返回整段会话，不做增量 cursor
 - usage 当前返回对方最近一次快照，不做历史分页
 - 还没有接 HTTPS、刷新 token、设备吊销和管理员后台

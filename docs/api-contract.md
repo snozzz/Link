@@ -4,25 +4,24 @@
 
 ## Auth
 
-### POST /v1/internal/invites/create
+### POST /v1/internal/pair-codes/create
 
 Response body:
 
-- `invite_key`
 - `pair_code`
 - `expires_in_minutes`
 - `remaining_slots`
 
 说明：
 
-- 当前由系统生成一组 `invite_key + pair_code`
-- 同一组信息最多允许两个人加入同一对
+- 当前由系统生成唯一 `pair_code`
+- 同一组 `pair_code` 最多允许两台设备加入同一对
+- 不是服务器生成的配对码不能进入
 
-### POST /v1/auth/invite/unlock
+### POST /v1/auth/pair-code/unlock
 
 Request body:
 
-- `invite_key`
 - `pair_code`
 - `nickname`
 - `device_public_key`
@@ -34,6 +33,12 @@ Response body:
 - `pair_code`
 - `display_name`
 - `member_count`
+
+错误码语义：
+
+- `pair_code_not_found`
+- `pair_code_expired`
+- `pair_code_exhausted`
 
 ## Pair state
 
@@ -116,8 +121,4 @@ Response body:
 
 - 当前所有持久化都落在 `server/link.db`
 - 当前默认只做原型阶段的最小鉴权，不含 HTTPS、refresh token、设备吊销
-- 下一步安卓端需要补：
-  - 登录时真实调用 `unlock`
-  - 本地消息仓库对接 `messages/sync`
-  - `Moments` 把本地时间线上传到 `usage/upload`
-  - 拉取 `usage/latest` 展示对方动态
+- 安卓端当前已接入真实登录、消息同步、Moments 上传与对方动态读取

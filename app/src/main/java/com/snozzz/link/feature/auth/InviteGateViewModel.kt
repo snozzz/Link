@@ -2,6 +2,7 @@ package com.snozzz.link.feature.auth
 
 import android.app.Application
 import android.os.Build
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.snozzz.link.LinkApplication
@@ -32,10 +33,6 @@ class InviteGateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun onInviteKeyChange(value: String) {
-        _uiState.update { it.copy(inviteKey = value.trim(), errorMessage = null) }
-    }
-
     fun onNicknameChange(value: String) {
         _uiState.update { it.copy(nickname = value, errorMessage = null) }
     }
@@ -48,32 +45,26 @@ class InviteGateViewModel(application: Application) : AndroidViewModel(applicati
         val current = _uiState.value
         val nickname = current.nickname.trim()
         val pairCode = current.pairCode.trim().uppercase()
-        val inviteKey = current.inviteKey.trim()
 
         when {
             nickname.length < 2 -> {
                 _uiState.update { it.copy(errorMessage = "昵称至少需要 2 个字符") }
             }
-            pairCode.length !in 4..12 -> {
-                _uiState.update { it.copy(errorMessage = "配对码长度需要在 4 到 12 位之间") }
-            }
-            inviteKey.length < 8 -> {
-                _uiState.update { it.copy(errorMessage = "邀请码至少需要 8 位") }
+            pairCode.length != 4 -> {
+                _uiState.update { it.copy(errorMessage = "配对码需要是 4 位，由服务器生成") }
             }
             else -> {
                 viewModelScope.launch {
                     _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                     try {
-                        val result = backendClient.unlockInvite(
-                            inviteKey = inviteKey,
+                        val result = backendClient.unlockPairCode(
                             pairCode = pairCode,
                             nickname = nickname,
-                            devicePublicKey = buildDevicePublicKey(nickname, pairCode),
+                            devicePublicKey = buildDevicePublicKey(),
                         )
                         val snapshot = SessionSnapshot(
                             nickname = result.displayName,
                             pairCode = result.pairCode,
-                            inviteKeyMasked = inviteKey.take(2) + "****" + inviteKey.takeLast(2),
                             sessionToken = result.sessionToken,
                             pairId = result.pairId,
                         )
@@ -114,18 +105,20 @@ class InviteGateViewModel(application: Application) : AndroidViewModel(applicati
         return "$nickname · Pair $pairCode"
     }
 
-    private fun buildDevicePublicKey(nickname: String, pairCode: String): String {
+    private fun buildDevicePublicKey(): String {
+        val context = getApplication<Application>()
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            ?.takeIf { it.isNotBlank() }
+            ?: "unknown-device"
         val model = Build.MODEL.orEmpty().replace(" ", "_")
-        return "android-$model-$nickname-$pairCode-${System.currentTimeMillis()}"
+        return "android-$androidId-$model"
     }
 
     private fun mapBackendError(exception: LinkBackendException): String {
         return when (exception.detail) {
-            "invite_not_found" -> "邀请码不存在，请确认输入无误"
-            "pair_code_mismatch" -> "邀请码和配对码不匹配"
-            "invite_expired" -> "邀请码已过期，请重新生成"
-            "invite_exhausted" -> "这组邀请码已经用满了"
-            "pair_full" -> "这组配对已经有两个人了"
+            "pair_code_not_found" -> "这个配对码不存在，只有服务器生成的配对码才能进入"
+            "pair_code_expired" -> "这个配对码已经过期了，请重新生成"
+            "pair_code_exhausted", "pair_full" -> "这个配对码已经被两台设备用过，不能再加入"
             else -> "登录失败：${exception.detail ?: exception.message.orEmpty()}"
         }
     }

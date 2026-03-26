@@ -39,7 +39,6 @@ fun LinkApp() {
         } else {
             InviteGateScreen(
                 uiState = authUiState,
-                onInviteKeyChange = inviteGateViewModel::onInviteKeyChange,
                 onNicknameChange = inviteGateViewModel::onNicknameChange,
                 onPairCodeChange = inviteGateViewModel::onPairCodeChange,
                 onUnlockClick = inviteGateViewModel::unlockInvite,

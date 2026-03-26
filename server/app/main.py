@@ -14,9 +14,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from .db import DB_PATH, get_connection, init_db
 from .models import (
-    InviteCreateResponse,
-    InviteUnlockRequest,
-    InviteUnlockResponse,
+    PairCodeCreateResponse,
+    PairCodeUnlockRequest,
+    PairCodeUnlockResponse,
     MessageSyncRequest,
     MessageSyncResponse,
     PairStatusResponse,
@@ -29,7 +29,7 @@ from .models import (
 PAIR_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 PAIR_CODE_LENGTH = 4
 
-app = FastAPI(title="Link Server", version="0.3.0")
+app = FastAPI(title="Link Server", version="0.3.1")
 
 
 @app.on_event("startup")
@@ -100,9 +100,9 @@ def health() -> Dict[str, str]:
     return {"status": "ok", "db_path": str(DB_PATH), "version": app.version}
 
 
-@app.post("/v1/internal/invites/create", response_model=InviteCreateResponse)
-def create_invite() -> InviteCreateResponse:
-    invite_key = secrets.token_urlsafe(12)
+@app.post("/v1/internal/pair-codes/create", response_model=PairCodeCreateResponse)
+@app.post("/v1/internal/invites/create", response_model=PairCodeCreateResponse)
+def create_pair_code_entry() -> PairCodeCreateResponse:
     created_at = now_millis()
     expires_in_minutes = 60
     expires_at = created_at + expires_in_minutes * 60 * 1000
@@ -123,56 +123,65 @@ def create_invite() -> InviteCreateResponse:
             INSERT INTO invites(invite_key, pair_code, expires_at_epoch_millis, created_at_epoch_millis, max_uses, use_count)
             VALUES(?, ?, ?, ?, ?, 0)
             """,
-            (invite_key, pair_code, expires_at, created_at, remaining_slots),
+            (pair_code, pair_code, expires_at, created_at, remaining_slots),
         )
 
-    return InviteCreateResponse(
-        invite_key=invite_key,
+    return PairCodeCreateResponse(
         pair_code=pair_code,
         expires_in_minutes=expires_in_minutes,
         remaining_slots=remaining_slots,
     )
 
 
-@app.post("/v1/auth/invite/unlock", response_model=InviteUnlockResponse)
-def unlock_invite(payload: InviteUnlockRequest) -> InviteUnlockResponse:
+@app.post("/v1/auth/pair-code/unlock", response_model=PairCodeUnlockResponse)
+@app.post("/v1/auth/invite/unlock", response_model=PairCodeUnlockResponse)
+def unlock_pair_code(payload: PairCodeUnlockRequest) -> PairCodeUnlockResponse:
     now = now_millis()
     pair_code = normalize_pair_code(payload.pair_code)
     pair_id = build_pair_id(pair_code)
     nickname = payload.nickname.strip()
 
     with get_connection() as connection:
-        invite = connection.execute(
+        pair_entry = connection.execute(
             """
-            SELECT invite_key, pair_code, expires_at_epoch_millis, use_count, max_uses
+            SELECT pair_code, expires_at_epoch_millis, use_count, max_uses
             FROM invites
-            WHERE invite_key = ?
+            WHERE pair_code = ?
+            ORDER BY created_at_epoch_millis DESC
+            LIMIT 1
             """,
-            (payload.invite_key,),
+            (pair_code,),
         ).fetchone()
-        if invite is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="invite_not_found")
-        if invite["pair_code"] != pair_code:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="pair_code_mismatch")
-        if invite["expires_at_epoch_millis"] < now:
-            raise HTTPException(status_code=status.HTTP_410_GONE, detail="invite_expired")
-        if invite["use_count"] >= invite["max_uses"]:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invite_exhausted")
+        if pair_entry is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="pair_code_not_found")
 
-        connection.execute(
+        existing_session = connection.execute(
             """
-            INSERT INTO pairs(pair_id, pair_code, created_at_epoch_millis)
-            VALUES(?, ?, ?)
-            ON CONFLICT(pair_id) DO NOTHING
+            SELECT session_token, nickname
+            FROM sessions
+            WHERE pair_id = ? AND device_public_key = ?
+            ORDER BY created_at_epoch_millis DESC
+            LIMIT 1
             """,
-            (pair_id, pair_code, now),
-        )
+            (pair_id, payload.device_public_key),
+        ).fetchone()
         member_count = connection.execute(
             "SELECT COUNT(*) AS count FROM pair_members WHERE pair_id = ?",
             (pair_id,),
         ).fetchone()["count"]
-        if member_count >= 2:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="pair_full")
+        if existing_session is not None:
+            return PairCodeUnlockResponse(
+                session_token=existing_session["session_token"],
+                pair_id=pair_id,
+                pair_code=pair_code,
+                display_name=existing_session["nickname"],
+                member_count=member_count,
+            )
+
+        if pair_entry["expires_at_epoch_millis"] < now:
+            raise HTTPException(status_code=status.HTTP_410_GONE, detail="pair_code_expired")
+        if pair_entry["use_count"] >= pair_entry["max_uses"] or member_count >= 2:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="pair_code_exhausted")
 
         session_token = secrets.token_urlsafe(24)
         connection.execute(
@@ -197,13 +206,13 @@ def unlock_invite(payload: InviteUnlockRequest) -> InviteUnlockResponse:
                 last_used_by_session_token = ?,
                 used_at_epoch_millis = ?,
                 used_by_session_token = ?
-            WHERE invite_key = ?
+            WHERE pair_code = ?
             """,
-            (now, session_token, now, session_token, payload.invite_key),
+            (now, session_token, now, session_token, pair_code),
         )
         member_count += 1
 
-    return InviteUnlockResponse(
+    return PairCodeUnlockResponse(
         session_token=session_token,
         pair_id=pair_id,
         pair_code=pair_code,

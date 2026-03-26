@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.ButterCream
@@ -40,7 +39,6 @@ import com.snozzz.link.ui.theme.PeachSorbet
 @Composable
 fun InviteGateScreen(
     uiState: InviteGateUiState,
-    onInviteKeyChange: (String) -> Unit,
     onNicknameChange: (String) -> Unit,
     onPairCodeChange: (String) -> Unit,
     onUnlockClick: () -> Unit,
@@ -70,7 +68,6 @@ fun InviteGateScreen(
             SecurityCard()
             InviteForm(
                 uiState = uiState,
-                onInviteKeyChange = onInviteKeyChange,
                 onNicknameChange = onNicknameChange,
                 onPairCodeChange = onPairCodeChange,
                 onUnlockClick = onUnlockClick,
@@ -102,7 +99,7 @@ private fun InviteHeader() {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "现在这版已经连上服务器。输入邀请码、配对码和昵称后，就会进入你们的私密空间。",
+                text = "现在这版已经连上服务器。输入服务器生成的配对码和昵称后，就会进入你们的私密空间。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -128,7 +125,7 @@ private fun SecurityCard() {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "当前版本会向你的 Link 服务器请求会话令牌，再把本地消息和 Moments 同步到双方空间。",
+                text = "配对码必须由服务器生成，同一组配对码最多只能绑定两台设备。不是服务器签发的配对码不能进入。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             )
@@ -139,7 +136,6 @@ private fun SecurityCard() {
 @Composable
 private fun InviteForm(
     uiState: InviteGateUiState,
-    onInviteKeyChange: (String) -> Unit,
     onNicknameChange: (String) -> Unit,
     onPairCodeChange: (String) -> Unit,
     onUnlockClick: () -> Unit,
@@ -156,7 +152,7 @@ private fun InviteForm(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                text = "邀请码验证",
+                text = "配对码验证",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -172,16 +168,8 @@ private fun InviteForm(
                 onValueChange = onPairCodeChange,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("配对码") },
-                supportingText = { Text("由服务器生成，例如 4B5Y") },
-            )
-            OutlinedTextField(
-                value = uiState.inviteKey,
-                onValueChange = onInviteKeyChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("测试邀请码") },
-                visualTransformation = PasswordVisualTransformation(),
+                label = { Text("服务器配对码") },
+                supportingText = { Text("由服务器生成，例如 4B5Y；最多两台设备可用") },
             )
             if (uiState.errorMessage != null) {
                 Text(
@@ -215,7 +203,7 @@ private fun InviteForm(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "如果提示邀请码和配对码不匹配，说明你们两边输入的不是同一组。",
+                text = "一个配对码只认服务器签发的那一组，用满两台设备后就会失效。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f),
             )

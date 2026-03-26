@@ -5,21 +5,19 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class InviteCreateResponse(BaseModel):
-    invite_key: str
+class PairCodeCreateResponse(BaseModel):
     pair_code: str
     expires_in_minutes: int = 60
     remaining_slots: int = 2
 
 
-class InviteUnlockRequest(BaseModel):
-    invite_key: str = Field(min_length=8)
+class PairCodeUnlockRequest(BaseModel):
     nickname: str = Field(min_length=2, max_length=24)
     pair_code: str = Field(min_length=4, max_length=12)
     device_public_key: str = Field(min_length=16)
 
 
-class InviteUnlockResponse(BaseModel):
+class PairCodeUnlockResponse(BaseModel):
     session_token: str
     pair_id: str
     pair_code: str

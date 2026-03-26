@@ -13,19 +13,17 @@ import java.net.URL
 class LinkBackendClient(
     private val baseUrl: String = DEFAULT_BASE_URL,
 ) {
-    suspend fun unlockInvite(
-        inviteKey: String,
+    suspend fun unlockPairCode(
         pairCode: String,
         nickname: String,
         devicePublicKey: String,
     ): UnlockInviteResult = withContext(Dispatchers.IO) {
         val body = JSONObject()
-            .put("invite_key", inviteKey)
             .put("pair_code", pairCode)
             .put("nickname", nickname)
             .put("device_public_key", devicePublicKey)
         val json = requestJson(
-            path = "/v1/auth/invite/unlock",
+            path = "/v1/auth/pair-code/unlock",
             method = "POST",
             body = body,
         )
