@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -42,6 +41,7 @@ import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.ButterCream
 import com.snozzz.link.ui.theme.MintCandy
 import com.snozzz.link.ui.theme.PeachSorbet
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -69,7 +69,6 @@ fun InviteGateScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -179,6 +178,7 @@ private fun InviteForm(
                     .onFocusEvent { state ->
                         if (state.isFocused) {
                             coroutineScope.launch {
+                                delay(250)
                                 nicknameBringIntoViewRequester.bringIntoView()
                             }
                         }
@@ -195,6 +195,7 @@ private fun InviteForm(
                     .onFocusEvent { state ->
                         if (state.isFocused) {
                             coroutineScope.launch {
+                                delay(250)
                                 pairCodeBringIntoViewRequester.bringIntoView()
                             }
                         }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,6 +46,7 @@ import com.snozzz.link.feature.chat.ChatViewModel
 import com.snozzz.link.ui.theme.Blush
 import com.snozzz.link.ui.theme.MintCandy
 import com.snozzz.link.ui.theme.PeachSorbet
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -87,7 +87,6 @@ fun ChatScreen(
                     ),
                 ),
             )
-            .imePadding()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -180,6 +179,7 @@ private fun ComposerCard(
                     .onFocusEvent { state ->
                         if (state.isFocused) {
                             coroutineScope.launch {
+                                delay(250)
                                 bringIntoViewRequester.bringIntoView()
                             }
                         }
