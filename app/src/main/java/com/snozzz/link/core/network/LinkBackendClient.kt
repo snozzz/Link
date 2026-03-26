@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -140,31 +141,104 @@ class LinkBackendClient(
         }
     }
 
+    suspend fun uploadPhoto(
+        sessionToken: String,
+        pairId: String,
+        sourcePhotoId: String,
+        capturedAtEpochMillis: Long,
+        displayName: String,
+        mimeType: String?,
+        sizeBytes: Long,
+        photoInputStream: InputStream,
+    ): PhotoUploadResult = withContext(Dispatchers.IO) {
+        val boundary = "LinkBoundary${System.currentTimeMillis()}"
+        val connection = openConnection(
+            path = "/v1/photos/upload",
+            method = "POST",
+            token = sessionToken,
+            contentType = "multipart/form-data; boundary=$boundary",
+        ).apply {
+            doOutput = true
+        }
+
+        return@withContext try {
+            DataOutputStream(connection.outputStream).use { output ->
+                output.writeFormField(boundary, "pair_id", pairId)
+                output.writeFormField(boundary, "source_photo_id", sourcePhotoId)
+                output.writeFormField(boundary, "captured_at_epoch_millis", capturedAtEpochMillis.toString())
+                output.writeFormField(boundary, "display_name", displayName)
+                output.writeFormField(boundary, "mime_type", mimeType.orEmpty())
+                output.writeFormField(boundary, "size_bytes", sizeBytes.toString())
+                output.writeFileField(
+                    boundary = boundary,
+                    fieldName = "photo_file",
+                    fileName = displayName,
+                    contentType = mimeType ?: "application/octet-stream",
+                    inputStream = photoInputStream,
+                )
+                output.writeBytes("--$boundary--\r\n")
+                output.flush()
+            }
+            val statusCode = connection.responseCode
+            val responseText = readStream(
+                if (statusCode in 200..299) connection.inputStream else connection.errorStream,
+            )
+            if (statusCode !in 200..299) {
+                val detail = responseText?.let(::parseErrorDetail)
+                throw LinkBackendException(
+                    statusCode = statusCode,
+                    detail = detail,
+                    message = detail ?: "HTTP $statusCode",
+                )
+            }
+            val json = JSONObject(responseText ?: "{}")
+            PhotoUploadResult(
+                photoId = json.getString("photo_id"),
+                stored = json.getBoolean("stored"),
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun fetchPhotoBackupSummary(
+        sessionToken: String,
+        pairId: String,
+    ): PhotoBackupSummaryResult = withContext(Dispatchers.IO) {
+        val json = requestJson(
+            path = "/v1/photos/summary/$pairId",
+            token = sessionToken,
+        )
+        PhotoBackupSummaryResult(
+            pairId = json.getString("pair_id"),
+            totalPhotos = json.getInt("total_photos"),
+            myPhotoCount = json.getInt("my_photo_count"),
+            latestUploadedAtEpochMillis = json.optLongOrNull("latest_uploaded_at_epoch_millis"),
+            latestOwnerNickname = json.optStringOrNull("latest_owner_nickname"),
+            latestDisplayName = json.optStringOrNull("latest_display_name"),
+        )
+    }
+
     private fun requestJson(
         path: String,
         method: String = "GET",
         token: String? = null,
         body: JSONObject? = null,
     ): JSONObject {
-        val url = URL(baseUrl.trimEnd('/') + path)
-        val connection = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = method
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            setRequestProperty("Accept", "application/json")
-            if (token != null) {
-                setRequestProperty("Authorization", "Bearer $token")
-            }
+        val connection = openConnection(
+            path = path,
+            method = method,
+            token = token,
+            contentType = if (body != null) "application/json" else null,
+        )
+
+        return try {
             if (body != null) {
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                outputStream.use { output ->
+                connection.doOutput = true
+                connection.outputStream.use { output ->
                     output.write(body.toString().toByteArray(Charsets.UTF_8))
                 }
             }
-        }
-
-        return try {
             val statusCode = connection.responseCode
             val responseText = readStream(
                 if (statusCode in 200..299) connection.inputStream else connection.errorStream,
@@ -180,6 +254,27 @@ class LinkBackendClient(
             JSONObject(responseText ?: "{}")
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun openConnection(
+        path: String,
+        method: String,
+        token: String?,
+        contentType: String?,
+    ): HttpURLConnection {
+        val url = URL(baseUrl.trimEnd('/') + path)
+        return (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 10_000
+            readTimeout = 10_000
+            setRequestProperty("Accept", "application/json")
+            if (token != null) {
+                setRequestProperty("Authorization", "Bearer $token")
+            }
+            if (contentType != null) {
+                setRequestProperty("Content-Type", contentType)
+            }
         }
     }
 
@@ -223,6 +318,35 @@ class LinkBackendClient(
                 durationLabel = json.optString("duration_label").takeIf { it.isNotBlank() },
             )
         }
+    }
+
+    private fun JSONObject.optLongOrNull(key: String): Long? {
+        return if (isNull(key)) null else optLong(key)
+    }
+
+    private fun JSONObject.optStringOrNull(key: String): String? {
+        return optString(key).takeIf { it.isNotBlank() }
+    }
+
+    private fun DataOutputStream.writeFormField(boundary: String, name: String, value: String) {
+        writeBytes("--$boundary\r\n")
+        writeBytes("Content-Disposition: form-data; name=\"$name\"\r\n\r\n")
+        write(value.toByteArray(Charsets.UTF_8))
+        writeBytes("\r\n")
+    }
+
+    private fun DataOutputStream.writeFileField(
+        boundary: String,
+        fieldName: String,
+        fileName: String,
+        contentType: String,
+        inputStream: InputStream,
+    ) {
+        writeBytes("--$boundary\r\n")
+        writeBytes("Content-Disposition: form-data; name=\"$fieldName\"; filename=\"$fileName\"\r\n")
+        writeBytes("Content-Type: $contentType\r\n\r\n")
+        inputStream.copyTo(this)
+        writeBytes("\r\n")
     }
 
     companion object {
@@ -277,6 +401,20 @@ data class LatestUsageResult(
     val ownerNickname: String,
     val capturedAtEpochMillis: Long,
     val events: List<BackendUsageEvent>,
+)
+
+data class PhotoUploadResult(
+    val photoId: String,
+    val stored: Boolean,
+)
+
+data class PhotoBackupSummaryResult(
+    val pairId: String,
+    val totalPhotos: Int,
+    val myPhotoCount: Int,
+    val latestUploadedAtEpochMillis: Long?,
+    val latestOwnerNickname: String?,
+    val latestDisplayName: String?,
 )
 
 class LinkBackendException(

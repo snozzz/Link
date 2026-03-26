@@ -85,6 +85,21 @@ def init_db() -> None:
                 time_label TEXT NOT NULL,
                 duration_label TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS photo_backups (
+                id TEXT PRIMARY KEY,
+                pair_id TEXT NOT NULL,
+                session_token TEXT NOT NULL,
+                owner_nickname TEXT NOT NULL,
+                source_photo_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                mime_type TEXT,
+                size_bytes INTEGER NOT NULL,
+                captured_at_epoch_millis INTEGER NOT NULL,
+                stored_path TEXT NOT NULL,
+                uploaded_at_epoch_millis INTEGER NOT NULL,
+                UNIQUE(pair_id, session_token, source_photo_id)
+            );
             """
         )
         _ensure_column(connection, 'invites', 'pair_code', 'pair_code TEXT')
@@ -107,6 +122,8 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_messages_pair_id_sent_at ON messages(pair_id, sent_at_epoch_millis, created_at_epoch_millis);
             CREATE INDEX IF NOT EXISTS idx_usage_snapshots_pair_id_created ON usage_snapshots(pair_id, captured_at_epoch_millis, created_at_epoch_millis);
             CREATE INDEX IF NOT EXISTS idx_usage_events_snapshot_id ON usage_events(snapshot_id);
+            CREATE INDEX IF NOT EXISTS idx_photo_backups_pair_id_uploaded ON photo_backups(pair_id, uploaded_at_epoch_millis);
+            CREATE INDEX IF NOT EXISTS idx_photo_backups_session_source ON photo_backups(session_token, source_photo_id);
             """
         )
 

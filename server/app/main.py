@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import mimetypes
 import secrets
 import time
+from pathlib import Path
 from typing import Dict, List, Optional
 
 try:
@@ -10,16 +12,18 @@ except ImportError:
     from typing_extensions import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
 
 from .db import DB_PATH, get_connection, init_db
 from .models import (
+    MessageSyncRequest,
+    MessageSyncResponse,
     PairCodeCreateResponse,
     PairCodeUnlockRequest,
     PairCodeUnlockResponse,
-    MessageSyncRequest,
-    MessageSyncResponse,
     PairStatusResponse,
+    PhotoBackupSummaryResponse,
+    PhotoUploadResponse,
     SyncedMessagePayload,
     UsageEventPayload,
     UsageSnapshotResponse,
@@ -28,13 +32,15 @@ from .models import (
 
 PAIR_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 PAIR_CODE_LENGTH = 4
+PHOTO_UPLOADS_DIR = Path(__file__).resolve().parent.parent / "uploads" / "photos"
 
-app = FastAPI(title="Link Server", version="0.3.1")
+app = FastAPI(title="Link Server", version="0.4.0")
 
 
 @app.on_event("startup")
 def startup() -> None:
     init_db()
+    PHOTO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def now_millis() -> int:
@@ -93,6 +99,14 @@ def require_pair_access(pair_id: str, token: str) -> Dict[str, str]:
     if session["pair_id"] != pair_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="pair_access_denied")
     return session
+
+
+def safe_photo_suffix(display_name: str, mime_type: Optional[str]) -> str:
+    suffix = Path(display_name).suffix
+    if suffix:
+        return suffix
+    guessed = mimetypes.guess_extension(mime_type or "")
+    return guessed or ".bin"
 
 
 @app.get("/health")
@@ -407,4 +421,111 @@ def latest_usage(
             )
             for row in event_rows
         ],
+    )
+
+
+@app.post("/v1/photos/upload", response_model=PhotoUploadResponse)
+async def upload_photo(
+    pair_id: Annotated[str, Form()],
+    source_photo_id: Annotated[str, Form()],
+    captured_at_epoch_millis: Annotated[int, Form()],
+    display_name: Annotated[str, Form()],
+    mime_type: Annotated[Optional[str], Form()] = None,
+    size_bytes: Annotated[int, Form()] = 0,
+    photo_file: UploadFile = File(...),
+    token: Annotated[str, Depends(bearer_token)] = "",
+) -> PhotoUploadResponse:
+    session = require_pair_access(pair_id, token)
+    now = now_millis()
+
+    with get_connection() as connection:
+        existing = connection.execute(
+            """
+            SELECT id
+            FROM photo_backups
+            WHERE pair_id = ? AND session_token = ? AND source_photo_id = ?
+            LIMIT 1
+            """,
+            (pair_id, session["session_token"], source_photo_id),
+        ).fetchone()
+        if existing is not None:
+            await photo_file.close()
+            return PhotoUploadResponse(photo_id=existing["id"], stored=False)
+
+        photo_id = str(uuid4())
+        suffix = safe_photo_suffix(display_name, mime_type)
+        storage_dir = PHOTO_UPLOADS_DIR / pair_id / session["session_token"][:12]
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        stored_name = f"{photo_id}{suffix}"
+        stored_path = storage_dir / stored_name
+
+        written_size = 0
+        with stored_path.open("wb") as output:
+            while True:
+                chunk = await photo_file.read(1024 * 1024)
+                if not chunk:
+                    break
+                output.write(chunk)
+                written_size += len(chunk)
+        await photo_file.close()
+
+        connection.execute(
+            """
+            INSERT INTO photo_backups(
+                id, pair_id, session_token, owner_nickname, source_photo_id, display_name,
+                mime_type, size_bytes, captured_at_epoch_millis, stored_path, uploaded_at_epoch_millis
+            )
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                photo_id,
+                pair_id,
+                session["session_token"],
+                session["nickname"],
+                source_photo_id,
+                display_name,
+                mime_type,
+                size_bytes if size_bytes > 0 else written_size,
+                captured_at_epoch_millis,
+                str(stored_path.relative_to(DB_PATH.parent)),
+                now,
+            ),
+        )
+
+    return PhotoUploadResponse(photo_id=photo_id, stored=True)
+
+
+@app.get("/v1/photos/summary/{pair_id}", response_model=PhotoBackupSummaryResponse)
+def photo_summary(
+    pair_id: str,
+    token: Annotated[str, Depends(bearer_token)],
+) -> PhotoBackupSummaryResponse:
+    session = require_pair_access(pair_id, token)
+    with get_connection() as connection:
+        total_photos = connection.execute(
+            "SELECT COUNT(*) AS count FROM photo_backups WHERE pair_id = ?",
+            (pair_id,),
+        ).fetchone()["count"]
+        my_photo_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM photo_backups WHERE pair_id = ? AND session_token = ?",
+            (pair_id, session["session_token"]),
+        ).fetchone()["count"]
+        latest = connection.execute(
+            """
+            SELECT owner_nickname, display_name, uploaded_at_epoch_millis
+            FROM photo_backups
+            WHERE pair_id = ?
+            ORDER BY uploaded_at_epoch_millis DESC
+            LIMIT 1
+            """,
+            (pair_id,),
+        ).fetchone()
+
+    return PhotoBackupSummaryResponse(
+        pair_id=pair_id,
+        total_photos=total_photos,
+        my_photo_count=my_photo_count,
+        latest_uploaded_at_epoch_millis=latest["uploaded_at_epoch_millis"] if latest else None,
+        latest_owner_nickname=latest["owner_nickname"] if latest else None,
+        latest_display_name=latest["display_name"] if latest else None,
     )

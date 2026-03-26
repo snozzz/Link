@@ -33,7 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.snozzz.link.ui.screens.ActivityScreenRoute
 import com.snozzz.link.ui.screens.ChatScreenRoute
-import com.snozzz.link.ui.screens.HomeScreen
+import com.snozzz.link.ui.screens.HomeScreenRoute
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +120,7 @@ fun AuthenticatedNavHost(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(Destination.Home.route) {
-                HomeScreen()
+                HomeScreenRoute()
             }
             composable(Destination.Activity.route) {
                 ActivityScreenRoute()

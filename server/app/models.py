@@ -75,3 +75,17 @@ class UsageSnapshotResponse(BaseModel):
     owner_nickname: str
     captured_at_epoch_millis: int
     events: List[UsageEventPayload]
+
+
+class PhotoUploadResponse(BaseModel):
+    photo_id: str
+    stored: bool
+
+
+class PhotoBackupSummaryResponse(BaseModel):
+    pair_id: str
+    total_photos: int
+    my_photo_count: int
+    latest_uploaded_at_epoch_millis: Optional[int] = None
+    latest_owner_nickname: Optional[str] = None
+    latest_display_name: Optional[str] = None

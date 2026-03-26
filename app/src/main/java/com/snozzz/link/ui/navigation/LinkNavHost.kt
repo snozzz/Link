@@ -17,7 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.snozzz.link.ui.screens.ActivityScreenRoute
 import com.snozzz.link.ui.screens.ChatScreenRoute
-import com.snozzz.link.ui.screens.HomeScreen
+import com.snozzz.link.ui.screens.HomeScreenRoute
 
 @Composable
 fun LinkNavHost(navController: NavHostController) {
@@ -59,7 +59,7 @@ fun LinkNavHost(navController: NavHostController) {
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(Destination.Home.route) {
-                HomeScreen()
+                HomeScreenRoute()
             }
             composable(Destination.Activity.route) {
                 ActivityScreenRoute()
